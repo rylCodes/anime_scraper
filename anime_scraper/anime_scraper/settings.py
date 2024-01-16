@@ -22,6 +22,17 @@ SCRAPEOPS_FAKE_BROWSER_HEADER_ENDPOINT = 'https://headers.scrapeops.io/v1/browse
 SCRAPEOPS_FAKE_USER_AGENT_ENABLED = True
 SCRAPEOPS_NUM_RESULTS = 50
 
+# SCRAPEOPS_PROXY_ENABLED = True
+# SCRAPEOPS_PROXY_SETTINGS = { 'country': 'us' }
+
+# ROTATING_PROXY_LIST = [
+#     '195.225.48.177:55774',
+#     '103.60.187.129:52195',
+#     '74.82.6.220:80'
+# ]
+
+# ROTATING_PROXY_LIST_PATH = 'my/path/proxies.txt' # if any
+
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = "anime_scraper (+http://www.yourdomain.com)"
 
@@ -62,6 +73,9 @@ ROBOTSTXT_OBEY = False
 DOWNLOADER_MIDDLEWARES = {
 #    "anime_scraper.middlewares.AnimeScraperDownloaderMiddleware": 543,
     "anime_scraper.middlewares.ScrapeOpsFakeBrowserHeaderAgentMiddleware": 400,
+    # "rotating_proxies.middlewares.RotatingProxyMiddleware": 610,
+    # "rotating_proxies.middlewares.BanDetectionMiddleware": 620,
+    "scrapeops_scrapy_proxy_sdk.scrapeops_scrapy_proxy_sdk.ScrapeOpsScrapyProxySdk": 725,
 }
 
 # Enable or disable extensions
