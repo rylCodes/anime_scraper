@@ -22,7 +22,6 @@ class AnimeScraperPipeline:
                 else:
                     adapter[field_name] = value.strip()
 
-
         # Format Type and Genre to lowercase
         lower_keys = ['type', 'genre']
         for lower_key in lower_keys:
@@ -49,63 +48,113 @@ class AnimeScraperPipeline:
             availability_arr = split_str_arr[1].split(' ') #It returns ['18', 'available)']
             adapter['availability'] = int(availability_arr[0])
         """
-
         return item
-    
+
+
 class SaveToPostgreSQLPipeline:
     def __init__(self):
-        # Connect to PostgreSQL
-        self.conn = psycopg2.connect(
-            host='localhost',
-            user='postgres',  # Replace with your PostgreSQL username
-            password='password121012',  # Replace with your PostgreSQL password
-            database='scrapy_db'
-        )
+        # self.conn = psycopg2.connect(
+        #     host='localhost',
+        #     user='postgres',  # Replace with your PostgreSQL username
+        #     password='password121012',  # Replace with your PostgreSQL password
+        #     database='scrapy_db'
+        # )
+        try:
+            # Connect to PostgreSQL
+            self.conn = psycopg2.connect(
+                host='localhost',
+                user='postgres',
+                password='password121012',
+                database='scrapy_db'
+            )
+        except psycopg2.Error as e:
+            print(f"Unable to connect to the database. Error: {e}")
 
         # Create a cursor, used to execute commands
         self.cur = self.conn.cursor()
 
-        # Create 'books' table if it doesn't exist
+        # Create 'anime' table if it doesn't exist
         self.cur.execute("""
-        CREATE TABLE IF NOT EXISTS anime(
-            id SERIAL PRIMARY KEY,
-            url VARCHAR(255),
-            title TEXT,
-            poster VARCHAR(255),
-            sypnosis TEXT,
-            type VARCHAR(255),
-            genre VARCHAR(255),
-            duration VARCHAR(255),
-            episodes INTEGER
-        )
+            CREATE TABLE IF NOT EXISTS anime(
+                id SERIAL PRIMARY KEY,
+                url VARCHAR(255),
+                title TEXT,
+                poster VARCHAR(255),
+                sypnosis TEXT,
+                type VARCHAR(255),
+                genre VARCHAR(255),
+                duration VARCHAR(255),
+                episodes INTEGER
+            )
         """)
 
+    # def process_item(self, item, spider):
+    #     self.cur.execute("""
+    #         INSERT INTO anime (
+    #             url, title, poster, sypnosis, type,
+    #             genre, duration, episodes
+    #         ) VALUES (
+    #             %s, %s, %s, %s, %s, %s, %s, %s
+    #         )""",
+    #         (
+    #             item["url"],
+    #             item["title"],
+    #             item["poster"],
+    #             item["sypnosis"],
+    #             item["type"],
+    #             item["genre"],
+    #             item["duration"],
+    #             item["episodes"],
+    #         )
+    #     )
     def process_item(self, item, spider):
         # Define insert statement
-        self.cur.execute("""
+        query = """
             INSERT INTO anime (
                 url, title, poster, sypnosis, type,
                 genre, duration, episodes
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s
-            )""",
-            (
+            )
+        """
+        # Replace '?' with None
+        duration = item.get("duration")
+        episodes = item.get("episodes")
+
+        # Check if duration and episodes are valid integers or None
+        try:
+            duration = int(duration) if duration is not None and duration.isdigit() else None
+            episodes = int(episodes) if episodes is not None and episodes.isdigit() else None
+        except ValueError:
+            duration = episodes = None
+
+        try:
+            # Execute insert of data into the database
+            self.cur.execute(query, (
                 item["url"],
                 item["title"],
                 item["poster"],
                 item["sypnosis"],
                 item["type"],
                 item["genre"],
-                item["duration"],
-                item["episodes"],
-            )
-        )
+                duration,
+                episodes,
+            ))
 
-        # Execute insert of data into the database
-        self.conn.commit()
+            self.conn.commit()
+
+        except Exception as e:
+            self.conn.rollback()
+            self.logger.error(f"Error processing item: {e}, Item: {item}")
+            # Skip the current item and continue processing others
+            return item
+
         return item
 
-    def close_spider(self, spider):
+    # def close_spider(self, spider):
+    #     self.cur.close()
+    #     self.conn.close()
+    def __del__(self):
         # Close cursor & connection to the database
         self.cur.close()
         self.conn.close()
